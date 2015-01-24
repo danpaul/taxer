@@ -1,0 +1,27 @@
+{
+  "name": "taxer",
+  "version": "1.0.0",
+  "description": "Taxer manages in memory persistent hierarchies.",
+  "main": "taxer.js",
+  "scripts": {
+    "test": "node ./test/test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danpaul/taxer.git"
+  },
+  "author": "Dan Breczinski",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/danpaul/taxer/issues"
+  },
+  "homepage": "https://github.com/danpaul/taxer",
+  "dependencies": {
+    "async": "~0.9.0",
+    "underscore": "~1.7.0"
+  },
+  "devDependencies": {
+    "knex": "~0.7.3",
+    "mysql": "~2.5.4"
+  }
+}
