@@ -51,9 +51,60 @@ module.exports = function(options, callback){
         if( self.useCache ){
             this.getChildrenFromCache(id, depth, callbackIn);
         } else {
-
+            this.getChildrenFromDb(id, depth, callbackIn);
         }
     }
+
+
+    // follows same spec as getChildren
+    this.getChildrenFromDb = function(id, depth, callbackIn){
+
+        var parentIds = [id]
+        var first = true
+        var allChildren = {}
+        var currentDepth = 0
+
+        async.whilst(
+            function(){
+                if( currentDepth > depth && depth > 0 ){ return false }
+                return( parentIds.length !== 0 )
+            },
+            function(callback){
+                var newParentIds = []
+
+                if( first ){
+                    first = false
+                } else {
+                    _.each(parentIds, function(parentId){
+                        allChildren[parentId.toString()] = parentId
+                    })
+                }
+
+                self.knex(self.tableName)
+                    .whereIn('parent', parentIds)
+                    .select(['child'])
+                    .then(function(children){
+                        _.each(children, function(child){
+                            var childId = child['child'];
+                            if( typeof(allChildren[childId.toString()]) === 'undefined' ){
+                                newParentIds.push(childId)
+                            }
+                        })
+                        parentIds = newParentIds
+                        if( depth > 0 ){ currentDepth++ }
+                        callback()
+                    })
+                    .catch(callback)
+            },
+            function(err){
+                if(err){ callbackIn(err) }
+                else{
+                    callbackIn(null, _.values(allChildren))
+                }
+            }
+        )
+    }
+
 
     // follows same spec as getChildren
     this.getChildrenFromCache = function(id, depth, callbackIn){
@@ -75,8 +126,8 @@ module.exports = function(options, callback){
                     }
                 })
             })
-            children = nextChildren.slice(0)
-            if( depth >= 0 ){ depth++ }
+            children = nextChildren
+            if( depth >= 0 ){ currentDepth++ }
         }
         callbackIn(null, _.values(allChildren))
     }

@@ -55,21 +55,67 @@
 			// add sub-child
 			function(callback){ taxer.add(4, 2, callback) },
 
+			// get children from cache
 			function(callback){
-				taxer.getChildren(1, -1, function(err, children){
-					if(err){ callback(err); }
+				taxer.getChildrenFromCache(1, -1, function(err, children){
+					if( err ){ callback(err) }
 					else{
-						assert((children.length === 3), 'Incorrect number of children returned.')
-						_.each([2, 3, 4], function(num){
-							assert(_.contains(children, num), 'Unexpected children returned')
-						})
-						console.log(children);
+						validateChildren(children)
+						callback()
 					}
 
 				})
 			},
 
+			// get children from db
+			function(callback){
+				taxer.getChildrenFromDb(1, -1, function(err, children){
+					if(err){ callback(err) }
+					else{
+						validateChildren(children)
+						callback()
+					}
+				})
+			},
+
+
+			// get children from cache, limit depth
+			function(callback){
+				taxer.getChildrenFromCache(1, 1, function(err, children){
+					if(err){ callback(err) }
+					else{
+						_.each([2, 3], function(num){
+							assert(_.contains(children, num), 'Incorrect children in cache depth limit')
+						})
+						assert((children.length === 2), 'Incorrect number of children in cache depth limit')
+						callback()
+					}
+				})
+			},
+
+			// get children from db, limit depth
+			function(callback){
+				taxer.getChildrenFromDb(1, 1, function(err, children){
+					if(err){ callback(err) }
+					else{
+						_.each([2, 3], function(num){
+							assert(_.contains(children, num), 'Incorrect children in DB depth limit')
+						})
+						assert((children.length === 2), 'Incorrect number of children in DB depth limit')
+						callback()
+					}
+				})
+			},
+
+
 		], callbackIn);
+	}
+
+	var validateChildren = function(children){
+		assert((children.length === 3), 'Incorrect number of children returned.')
+		_.each([2, 3, 4], function(num){
+			assert(_.contains(children, num), 'Unexpected children returned')
+		})
 	}
 
 	test.callTest = function(){
