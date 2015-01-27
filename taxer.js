@@ -176,18 +176,11 @@ module.exports = function(options, callback){
     // signature: current parent, child, new parent, callback
     this.move = function(child, currentParent, newParent, callbackIn){
         async.series([
-            // unlink parent
+            // unlink from old parent
             function(callback){ self.unlink(child, currentParent, callback) },
-            // link parent
-            function(callback){
-                // self.add()
-                    // this.add = function(id, parent, callbackIn){
-            }
-
-        ], callback)
-
-
-
+            // link to new parent
+            function(callback){ self.add(child, newParent, callback) }
+        ], callbackIn)
     }
 
     // removes link from parent to child
