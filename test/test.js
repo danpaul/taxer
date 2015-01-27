@@ -63,7 +63,6 @@
 						validateChildren(children)
 						callback()
 					}
-
 				})
 			},
 
@@ -107,6 +106,14 @@
 				})
 			},
 
+			// add new nodes
+			function(callback){ taxer.add(10, null, callback) },
+			function(callback){ taxer.add(11, 10, callback) },
+			function(callback){ taxer.add(12, 11, callback) },
+			function(callback){ taxer.add(13, 11, callback) },
+
+			// move nodes
+			function(callback){ taxer.move(11, 10, 4, callback); },
 
 		], callbackIn);
 	}

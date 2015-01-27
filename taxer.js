@@ -39,10 +39,33 @@ module.exports = function(options, callback){
         self.knex(self.tableName)
             .insert({'child': id, 'parent': parent })
             .then(function(){
-                if( self.useCache ){ self.updateMaps(parent, id); }
+                if( self.useCache ){ self.addToCache(id, parent); }
                 callbackIn()
             })
             .catch(callbackIn)
+    }
+
+    this.addToCache = function(child, parent){
+
+        var parentString = parent.toString()
+        var childString = child.toString()
+
+        // initialize obj varialbes if unset
+        if( typeof(self.parentChildMap[parentString]) === 'undefined' ){
+            self.parentChildMap[parentString] = [];
+
+        }
+        if( typeof(self.childParentMap[childString]) === 'undefined' ){
+            self.childParentMap[childString] = [];
+        }
+
+        // add values to map if not already present
+        if( !_.contains(self.parentChildMap[parentString], child) ){
+            self.parentChildMap[parentString].push(child)
+        }
+        if( !_.contains(self.childParentMap[childString], parent) ){
+            self.childParentMap[childString].push(parent)
+        }
     }
 
     // gets childrent to depth, if depth is -1, will get all children
@@ -150,27 +173,48 @@ module.exports = function(options, callback){
             .catch(callback)
     }
 
-    this.updateMaps = function(parent, child){
+    // signature: current parent, child, new parent, callback
+    this.move = function(child, currentParent, newParent, callbackIn){
+        async.series([
+            // unlink parent
+            function(callback){ self.unlink(child, currentParent, callback) },
+            // link parent
+            function(callback){
+                // self.add()
+                    // this.add = function(id, parent, callbackIn){
+            }
 
-        var parentString = parent.toString()
-        var childString = child.toString()
+        ], callback)
 
-        // initialize obj varialbes if unset
-        if( typeof(self.parentChildMap[parentString]) === 'undefined' ){
-            self.parentChildMap[parentString] = [];
 
-        }
-        if( typeof(self.childParentMap[childString]) === 'undefined' ){
-            self.childParentMap[childString] = [];
-        }
 
-        // add values to map if not already present
-        if( !_.contains(self.parentChildMap[parentString], child) ){
-            self.parentChildMap[parentString].push(child)
-        }
-        if( !_.contains(self.childParentMap[childString], parent) ){
-            self.childParentMap[childString].push(parent)
-        }
+    }
+
+    // removes link from parent to child
+    this.unlink = function(child, parent, callbackIn){
+        // unlink from the database
+        self.unlinkFromDb(child, parent, function(err){
+            if(err){ callbackIn(err) }
+            else{
+                if( self.useCache ){ self.unlinkFromCache(child, parent) }
+                callbackIn()
+            }
+        })
+    }
+
+    // removes link between child and parent from cache
+    this.unlinkFromCache = function(child, parent){
+        self.parentChildMap[parent] = _.without(self.parentChildMap[parent], child)
+        self.childParentMap[child] = _.without(self.childParentMap[child], parent)
+    }
+
+    // unlinks child from parent in DB
+    this.unlinkFromDb = function(child, parent, callbackIn){
+        self.knex(self.tableName)
+            .where({'parent': parent, 'child': child})
+            .del()
+            .then(function(){ callbackIn() })
+            .catch(callbackIn)
     }
 
     this.init();
