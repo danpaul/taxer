@@ -159,8 +159,7 @@
 				taxer.getTreeFromDb(0, -1, function(err, tree){
 					if(err){ callback(err) }
 					else{
-console.log(tree)
-						// assert((tree.children[0].children[0].id === 1), 'Incorrect child from getTreeFromCache')
+						assert((tree.children[0].children[0].id === 2), 'Incorrect child from getTreeFromCache')
 						callback()
 					}
 				})

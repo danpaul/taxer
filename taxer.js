@@ -201,7 +201,15 @@ module.exports = function(options, callback){
             if( depthLimit >= 0 ){ currentDepth++; }            
         }
 
-        // create object tree
+        self.buildTreeFromMap(treeMap)
+        callbackIn(null, treeMap[parent.toString()]);
+
+    }
+
+    // helper for getTreeFromCache and getTreeFromDb
+    // parses map created by those functions and returns a tree
+    this.buildTreeFromMap = function(treeMap){
+
         _.each(treeMap, function(node, id){
             var nodesChildren = node.children;
             node.children = [];
@@ -215,9 +223,8 @@ module.exports = function(options, callback){
             })
         })
 
-        callbackIn(null, treeMap[parent.toString()]);
-
     }
+
 /******************************************************************************/
     this.getTreeFromDb = function(parent, depthLimit, callbackIn){
 
@@ -233,10 +240,9 @@ module.exports = function(options, callback){
             },
             function(callback){
                 var nextChildren = []
-
                 // query DB for children
                 self.knex(self.tableName)
-                    .whereIn('parent', [parent])
+                    .whereIn('parent', children)
                     .select(['parent', 'child'])
                     .then(function(rows){
                         _.each(rows, function(row){
@@ -253,8 +259,6 @@ module.exports = function(options, callback){
                             }
                         })
                         children = _.uniq(nextChildren)
-// console.log(treeMap)
-// console.log(children)
                         if( depthLimit >= 0 ){ currentDepth++ }
                         callback()
                     })
@@ -263,8 +267,8 @@ module.exports = function(options, callback){
             function(err){
                 if( err ){ callbackIn(err) }
                 else{
-console.log(treeMap)
-                    callbackIn()
+                    self.buildTreeFromMap(treeMap)
+                    callbackIn(null, treeMap[parent.toString()])
                 }
             }
         )
