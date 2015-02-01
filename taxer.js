@@ -53,10 +53,16 @@ module.exports = function(options, callback){
         // initialize obj varialbes if unset
         if( typeof(self.parentChildMap[parentString]) === 'undefined' ){
             self.parentChildMap[parentString] = [];
-
         }
+        if( typeof(self.parentChildMap[childString]) === 'undefined' ){
+            self.parentChildMap[childString] = [];
+        }
+
         if( typeof(self.childParentMap[childString]) === 'undefined' ){
             self.childParentMap[childString] = [];
+        }
+        if( typeof(self.childParentMap[parentString]) === 'undefined' ){
+            self.childParentMap[parentString] = [];
         }
 
         // add values to map if not already present
@@ -131,9 +137,15 @@ module.exports = function(options, callback){
 
     // follows same spec as getChildren
     this.getChildrenFromCache = function(id, depth, callbackIn){
+
         var allChildren = {};
         var children = self.parentChildMap[id.toString()];
         var currentDepth = 0;
+
+        if( typeof(children) === 'undefined' ){
+            callbackIn(null, []);
+            return;
+        }
 
         while( children.length !== 0 && (depth > currentDepth || depth < 0 ) ){
             var nextChildren = [];
@@ -153,6 +165,110 @@ module.exports = function(options, callback){
             if( depth >= 0 ){ currentDepth++ }
         }
         callbackIn(null, _.values(allChildren))
+    }
+
+    this.getTree = function(parent, depthLimit, callbackIn){
+        if(serlf.useCache){
+            this.getTreeFromCache(parent, depthLimit, callbackIn);
+        } else {
+            this.getTreeFromDb(parent, depthLimit, callbackIn);
+        }
+    }
+
+    this.getTreeFromCache = function(parent, depthLimit, callbackIn){
+
+        var treeMap = {};
+        treeMap[parent.toString()] = {id: parent, children: self.parentChildMap[parent]}
+
+        var children = self.parentChildMap[parent];
+        var currentDepth = 0;
+
+        // build map of id to objects
+        while( children.length !== 0  && (depthLimit < 0 || currentDepth < depthLimit) ){
+            var nextChildren = [];
+            _.each(children, function(child){
+                if( typeof(treeMap[child.toString()]) === 'undefined' ){
+                    var childsChildren = self.parentChildMap[child.toString()];
+                    treeMap[child.toString()] = {id: child, children: childsChildren}
+                    _.each(childsChildren, function(childsChild){
+                        if( typeof(treeMap[childsChild.toString()]) === 'undefined' ){
+                            nextChildren.push(childsChild)
+                        }
+                    })
+                }
+            })
+            children = _.uniq(nextChildren);
+            if( depthLimit >= 0 ){ currentDepth++; }            
+        }
+
+        // create object tree
+        _.each(treeMap, function(node, id){
+            var nodesChildren = node.children;
+            node.children = [];
+            _.each(nodesChildren, function(nodesChild){
+                if( typeof(treeMap[nodesChild.toString()]) !== 'undefined' ){
+                    node.children.push(treeMap[nodesChild.toString()])
+                } else {
+                    node.children.push(null)
+                }
+                
+            })
+        })
+
+        callbackIn(null, treeMap[parent.toString()]);
+
+    }
+/******************************************************************************/
+    this.getTreeFromDb = function(parent, depthLimit, callbackIn){
+
+        var  children = [parent]
+        var currentDepth = 0
+        var treeMap = {}
+        treeMap[parent.toString()] = {id: parent, children: []};
+
+        async.whilst(
+            function(){
+                return(children.length !== 0
+                       && (depthLimit < 0 || currentDepth < depthLimit));
+            },
+            function(callback){
+                var nextChildren = []
+
+                // query DB for children
+                self.knex(self.tableName)
+                    .whereIn('parent', [parent])
+                    .select(['parent', 'child'])
+                    .then(function(rows){
+                        _.each(rows, function(row){
+                            var ps = row.parent.toString()
+                            var cs = row.child.toString()
+                            if( typeof(treeMap[ps]) === 'undefined' ){
+                                treeMap[ps] = {id: row.parent, children: []}
+                            }
+
+                            treeMap[ps.toString()].children.push(row.child)
+                            if( typeof(treeMap[cs]) === 'undefined' ){
+                                nextChildren.push(row.child)
+                                treeMap[cs] = {id: row.child, children: []}
+                            }
+                        })
+                        children = _.uniq(nextChildren)
+// console.log(treeMap)
+// console.log(children)
+                        if( depthLimit >= 0 ){ currentDepth++ }
+                        callback()
+                    })
+                    .catch(callback)
+            },
+            function(err){
+                if( err ){ callbackIn(err) }
+                else{
+console.log(treeMap)
+                    callbackIn()
+                }
+            }
+        )
+
     }
 
     this.init = function(){

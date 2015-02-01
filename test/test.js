@@ -115,6 +115,58 @@
 			// move nodes
 			function(callback){ taxer.move(11, 10, 4, callback); },
 
+			// get 4's childeredn from cache
+			function(callback){
+				taxer.getChildrenFromCache(4, -1, function(err, children){
+					if(err){ callback(err) }
+					else{
+						_.each([11, 12, 13], function(num){
+							assert(_.contains(children, num), 'Incorrect children in cache depth limit')
+						})
+						assert((children.length === 3), 'Incorrect number of children in cache depth limit')
+						callback()
+					}
+				})
+			},
+
+			// get children from db
+			function(callback){
+				taxer.getChildrenFromDb(4, -1, function(err, children){
+					if(err){ callback(err) }
+					else{
+						_.each([11, 12, 13], function(num){
+							assert(_.contains(children, num), 'Incorrect children in cache depth limit')
+						})
+						assert((children.length === 3), 'Incorrect number of children in cache depth limit')
+						callback()
+					}
+				})
+			},
+
+			// get full tree from cache
+			function(callback){
+				taxer.getTreeFromCache(0, -1, function(err, tree){
+					if(err){ callback(err) }
+					else{
+						assert((tree.children[0].children[0].id === 2), 'Incorrect child from getTreeFromCache')
+						callback()
+					}
+				})
+			},
+
+			// get full tree from cache
+			function(callback){
+				taxer.getTreeFromDb(0, -1, function(err, tree){
+					if(err){ callback(err) }
+					else{
+console.log(tree)
+						// assert((tree.children[0].children[0].id === 1), 'Incorrect child from getTreeFromCache')
+						callback()
+					}
+				})
+			},
+
+
 		], callbackIn);
 	}
 
@@ -128,7 +180,7 @@
 	test.callTest = function(){
 		test.runTest(function(err){
 			if(err){
-				console.log( 'An error occurred: ')
+				console.log('An error occurred: ')
 				console.log(err)
 			} else {
 				console.log('success')
